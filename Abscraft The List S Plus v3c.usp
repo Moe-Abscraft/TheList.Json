@@ -1,0 +1,191 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name:
+System Name:
+System Number:
+Programmer:
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+// #SYMBOL_NAME ""
+// #HINT ""
+#DEFINE_CONSTANT NUMOFITEMS 40
+#define_constant NUMOFVALUES 40
+// #CATEGORY "" 
+#PRINT_TO_TRACE
+// #DIGITAL_EXPAND 
+// #ANALOG_SERIAL_EXPAND 
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+#user_simplsharp_library "AbscraftTheListV3c"
+                           
+                        
+digital_input _skip_, _skip_, Save;
+string_input Item_Name[NUMOFITEMS];
+analog_input Recall, Delete, Modify, Item_ID, Item_Integer_Values[NUMOFVALUES];
+string_input Item_String_Values[NUMOFVALUES, NUMOFVALUES][50];
+                          
+digital_output _skip_, _skip_, Item_Visible[NUMOFITEMS, NUMOFITEMS];
+string_output Recalled_Item_Name;
+analog_output Next_Available, Recalled_Item_ID, Recalled_Item_I_Values[NUMOFVALUES];
+string_output Recalled_Item_S_Values[NUMOFVALUES], Item_Names[NUMOFITEMS];
+
+integer_parameter Num_Of_Presets;
+string_parameter File_Path[100];
+         
+string itemName[50];
+string itemStringValues[NUMOFVALUES][50];
+integer itemId;
+integer itemIntegerValues[NUMOFVALUES];
+
+TheList list;
+
+eventHandler OnItemNameUpdated(TheList sender, ItemsNameEventArgs args)
+{
+	integer i, j;
+	string itemName[50];
+
+	try
+	{
+		// string temp[20][20];
+		
+		// print("Item Names Updated");
+		
+		Next_Available = args.NextAvailable;
+		
+		for(i = 1 to NUMOFITEMS)
+		{
+			//print("Item %d name: %s", i, args.Names[i - 1]);
+			itemName = args.Names[i - 1];
+			Item_Names[i] = itemName;
+			if(itemName != "")
+			{
+				Item_Visible[i] = 1;
+			}
+			else
+			{
+				Item_Visible[i] = 0;
+			}		
+		}
+	}
+	catch
+	{
+		print("Error handling the event onnameupdate: %s %d %d", GetExceptionMessage(), i , j);
+	}
+}
+
+eventHandler OnItemRecalled(TheList sender, ItemRecallEventArgs args)
+{
+ 	integer i;
+ 	Recalled_Item_ID = args.ItemId;
+ 	Recalled_Item_Name = args.ItemName;
+ 	for(i = 1 to NUMOFVALUES)
+ 	{
+ 		Recalled_Item_I_Values[i] = args.ItemIntegerValues[i - 1];
+ 		Recalled_Item_S_Values[i] = args.ItemStringValues[ i - 1];
+ 	}
+}
+
+change Item_Integer_Values
+{
+	integer index;
+	index = getLastModifiedArrayIndex();
+	itemIntegerValues[index] = Item_Integer_Values[index];
+}
+
+change Item_String_Values
+{
+	integer index;
+	index = getLastModifiedArrayIndex();
+	itemStringValues[index] = Item_String_Values[index];
+}
+
+change Item_Name
+{
+	itemName = Item_Name;
+}
+
+change Item_ID
+{
+	itemId = Item_ID;
+}
+
+push Save
+{
+	integer i;
+	for(i = 1 to NUMOFVALUES)
+	{
+		list.IntegerValues[i - 1] = itemIntegerValues[i];
+		list.StringValues[i - 1] = itemStringValues[i];
+	}
+	list.AddItem(itemName, itemId);
+	//Next_Available = list.NextAvailable;
+}
+
+change Recall
+{
+	//list.PrintItem(Recall - 1);
+	integer i;
+	if(Recall > 0 && Recall <= Num_Of_Presets)
+		list.Recall(Recall - 1);
+	else
+	{
+		Recalled_Item_ID = Recall;
+	 	Recalled_Item_Name = "Out Of Range Item";
+	 	// for(i = 1 to 20)
+	 	// {
+	 	// 	Recalled_Item_I_Values[i] = 0;
+	 	// 	Recalled_Item_S_Values[i] = "";
+	 	// }	
+	}
+}
+
+change Delete
+{
+	if(Delete = 0)
+		list.DeleteAll();
+	else
+		list.DeleteItem(Delete - 1);
+	//Next_Available = list.NextAvailable;
+}
+
+change Modify
+{
+	integer i;
+	for(i = 1 to NUMOFVALUES)
+	{
+		list.IntegerValues[i - 1] = itemIntegerValues[i];
+		list.StringValues[i - 1] = itemStringValues[i];
+	}
+
+ 	list.ModifyItem(Modify - 1, itemId, itemName);
+}
+                               
+function main()
+{
+	list.FilePath = File_Path;
+	registerEvent(list, ItemsNameUpdated, OnItemNameUpdated);
+	registerEvent(list, ItemRecallEvent, OnItemRecalled);
+	list.ReadFile();
+}
