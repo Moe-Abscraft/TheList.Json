@@ -256,5 +256,12 @@ namespace Abscraft_TheList
             _theList.Clear();
             WriteFile();
         }
+
+        public string FindMyIp()
+        {
+            return 
+            CrestronEthernetHelper.GetEthernetParameter(
+                CrestronEthernetHelper.ETHERNET_PARAMETER_TO_GET.GET_CURRENT_IP_ADDRESS, 0);
+        }
     }
 }
